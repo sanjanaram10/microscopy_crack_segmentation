@@ -5,7 +5,7 @@ import cv2
 from src.preprocessing import preprocess_for_instance_seg
 from pycocotools import mask as coco_mask
 from src.config import Config as cfg
-import numpy as np
+
 
 class CrackDataset(Dataset):
     def __init__(self, img_dir, coco_json_path, transforms=None):
@@ -25,9 +25,7 @@ class CrackDataset(Dataset):
         img_info = self.images[idx]
         img_path = f"{self.img_dir}/{img_info['file_name']}"
 
-        # Returns tensor [3, H, W] float32 in [0,1]
-        img_tensor = preprocess_for_instance_seg(img_path)
-
+        img = preprocess_for_instance_seg(img_path)
         annotations = self.ann_by_image.get(img_info['id'], [])
 
         masks, boxes, labels = [], [], []
@@ -58,13 +56,6 @@ class CrackDataset(Dataset):
                 labels.append(1)
                 masks.append(torch.as_tensor(m, dtype=torch.uint8))
 
-        # Apply image-only transforms
-        if self.transforms is not None:
-            # Convert tensor [3, H, W] float [0,1] → numpy [H, W, 3] uint8
-            img_np = (img_tensor.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-            transformed = self.transforms(image=img_np)
-            img_tensor = transformed['image']  # ToTensorV2 converts back to [3, H, W] tensor
-
         target = {
             "boxes": torch.as_tensor(boxes, dtype=torch.float32).reshape(-1, 4),
             "labels": torch.ones((len(boxes),), dtype=torch.int64),
@@ -74,7 +65,7 @@ class CrackDataset(Dataset):
             "image_id": torch.tensor([img_info['id']])
         }
 
-        return img_tensor, target
+        return img, target
 
     def __len__(self):
         return len(self.images)

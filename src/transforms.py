@@ -12,13 +12,11 @@ def get_train_transforms(img_size=512):
         A.RandomBrightnessContrast(p=0.3),
         A.GaussianBlur(blur_limit=3, p=0.2),
         A.GaussNoise(p=0.2),
-        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255.0),
         ToTensorV2(),
     ])
 
 
 def get_val_transforms(img_size=512):
     return A.Compose([
-        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255.0),
         ToTensorV2(),
     ])

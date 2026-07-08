@@ -29,13 +29,11 @@ def normalize_to_training_distribution(img, target_mean, target_std):
     img = img * target_std + target_mean
     return np.clip(img, 0, 255).astype(np.uint8)
 
+def apply_clahe(img, clip_limit=3.0, tile_size=(8, 8)):
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_size)
+    return clahe.apply(img)
 
-def preprocess_for_instance_seg(
-    img_path,
-    stats_path=None,
-    reference_path=None,
-    img_size=512
-):
+def preprocess_for_instance_seg(img_path, stats_path=None, reference_path=None, img_size=512):
     img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
     if img is None:
         raise FileNotFoundError(f"Could not read image: {img_path}")
@@ -53,8 +51,3 @@ def preprocess_for_instance_seg(
     img_3ch = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     tensor = torch.FloatTensor(img_3ch).permute(2, 0, 1) / 255.0
     return tensor
-
-
-def apply_clahe(img, clip_limit=3.0, tile_size=(8, 8)):
-    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_size)
-    return clahe.apply(img)

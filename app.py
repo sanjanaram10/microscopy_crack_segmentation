@@ -9,9 +9,17 @@ from PIL import Image
 from src.model import build_model
 from src.preprocessing import preprocess_for_instance_seg
 from src.config import Config
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 app = FastAPI()
 cfg = Config()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def root():
+    return FileResponse("static/index.html")
 
 # Load model once at startup
 model = build_model(cfg.NUM_CLASSES)

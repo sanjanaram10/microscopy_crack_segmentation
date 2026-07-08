@@ -1,0 +1,13 @@
+# Model checkpoints
+checkpoints/
+
+# Dataset
+dataset/
+
+# Training outputs
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+microImageEnv/

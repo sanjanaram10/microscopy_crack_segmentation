@@ -1,4 +1,3 @@
-<!-- static/index.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,7 +5,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 40px auto;
             padding: 20px;
             background: #f9f9f9;
@@ -22,20 +21,60 @@
             transition: border-color 0.2s;
         }
         .upload-area:hover { border-color: #666; }
-        .results {
-            display: flex;
-            gap: 30px;
+        .loading {
+            display: none;
+            margin-top: 16px;
+            color: #666;
+            font-style: italic;
+        }
+        .summary {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
             margin-top: 24px;
         }
-        .image-wrapper {
-            position: relative;
-            display: inline-block;
+        .result-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .result-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: #555;
+            word-break: break-all;
+        }
+        .image-pair {
+            display: flex;
+            gap: 10px;
+        }
+        .image-pair > div {
+            flex: 1;
+        }
+        .image-pair p {
+            margin: 0 0 4px 0;
+            font-size: 12px;
+            color: #888;
         }
         canvas {
+            width: 100%;
             display: block;
-            max-width: 100%;
-            border-radius: 6px;
-            border: 1px solid #ddd;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        .crack-stats {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #444;
         }
         #tooltip {
             position: fixed;
@@ -49,20 +88,11 @@
             z-index: 100;
             line-height: 1.6;
         }
-        #stats {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 16px 20px;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-        #stats h3 { margin-top: 0; }
-        .loading {
+        .progress {
             display: none;
-            margin-top: 16px;
-            color: #666;
-            font-style: italic;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #555;
         }
     </style>
 </head>
@@ -70,132 +100,161 @@
     <h1>Crack Detection Analysis</h1>
 
     <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-        <p>Click to upload an image — hover over detected cracks to see metrics</p>
-        <input type="file" id="fileInput" accept="image/*" style="display:none">
+        <p>Click to upload one or more images</p>
+        <p style="font-size:13px; color:#888">Hold Shift or Cmd/Ctrl to select multiple files</p>
+        <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
     </div>
 
-    <p class="loading" id="loading">Analyzing image, please wait...</p>
+    <p class="loading" id="loading">Analyzing images, please wait...</p>
+    <p class="progress" id="progress"></p>
 
-    <div id="stats" style="display:none">
-        <h3>Summary</h3>
-        <p>Total cracks detected: <strong id="crackCount">-</strong></p>
+    <div class="summary" id="summary">
+        <strong>Summary:</strong>
+        <span id="summaryText"></span>
     </div>
 
-    <div class="results">
-        <div>
-            <h3>Original</h3>
-            <div class="image-wrapper">
-                <canvas id="originalCanvas"></canvas>
-            </div>
-        </div>
-        <div>
-            <h3>Analyzed — hover over cracks</h3>
-            <div class="image-wrapper">
-                <canvas id="resultCanvas"></canvas>
-            </div>
-        </div>
-    </div>
-
+    <div class="results-grid" id="resultsGrid"></div>
     <div id="tooltip"></div>
 
     <script>
-        let crackData = [];
-        let canvasScale = { x: 1, y: 1 };
+        // Store crack data per canvas for hover
+        const canvasDataMap = new Map();
 
         document.getElementById('fileInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
 
-            // Show original image on canvas
-            const originalCanvas = document.getElementById('originalCanvas');
-            const origCtx = originalCanvas.getContext('2d');
-            const img = new Image();
-            img.onload = () => {
-                originalCanvas.width = img.width;
-                originalCanvas.height = img.height;
-                origCtx.drawImage(img, 0, 0);
-            };
-            img.src = URL.createObjectURL(file);
-
-            // Show loading
+            // Reset UI
+            document.getElementById('resultsGrid').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
             document.getElementById('loading').style.display = 'block';
-            document.getElementById('stats').style.display = 'none';
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('progress').textContent =
+                `Uploading ${files.length} image${files.length > 1 ? 's' : ''}...`;
 
-            // Send to backend
             const formData = new FormData();
-            formData.append('file', file);
+            files.forEach(f => formData.append('files', f));
 
             const response = await fetch('/analyze', { method: 'POST', body: formData });
             const data = await response.json();
 
             document.getElementById('loading').style.display = 'none';
+            document.getElementById('progress').style.display = 'none';
 
-            // Draw result image on canvas
-            const resultCanvas = document.getElementById('resultCanvas');
-            const resultCtx = resultCanvas.getContext('2d');
-            const resultImg = new Image();
-            resultImg.onload = () => {
-                resultCanvas.width = resultImg.width;
-                resultCanvas.height = resultImg.height;
-                resultCtx.drawImage(resultImg, 0, 0);
+            // Summary line
+            const totalCracks = data.results.reduce((sum, r) => sum + r.crack_count, 0);
+            document.getElementById('summaryText').textContent =
+                `${files.length} image${files.length > 1 ? 's' : ''} analyzed — 
+                 ${totalCracks} total cracks detected`;
+            document.getElementById('summary').style.display = 'block';
 
-                // Store scale factors in case canvas is CSS-scaled
+            // Render each result
+            data.results.forEach(result => renderResult(result));
+        });
+
+
+        function renderResult(result) {
+            const grid = document.getElementById('resultsGrid');
+
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.innerHTML = `
+                <h3>${result.filename}</h3>
+                <div class="image-pair">
+                    <div>
+                        <p>Original</p>
+                        <canvas id="orig-${result.filename}"></canvas>
+                    </div>
+                    <div>
+                        <p>Analyzed — hover over cracks</p>
+                        <canvas id="result-${result.filename}"></canvas>
+                    </div>
+                </div>
+                <div class="crack-stats">
+                    Cracks detected: <strong>${result.crack_count}</strong>
+                </div>
+            `;
+            grid.appendChild(card);
+
+            // Draw original
+            drawImageOnCanvas(
+                result.original_b64,
+                document.getElementById(`orig-${result.filename}`)
+            );
+
+            // Draw result and attach hover
+            const resultCanvas = document.getElementById(`result-${result.filename}`);
+            drawImageOnCanvas(result.image_b64, resultCanvas, () => {
+                // Store crack data keyed by canvas
+                canvasDataMap.set(resultCanvas, {
+                    cracks: result.cracks,
+                    scale: { x: 1, y: 1 }
+                });
+
+                // Update scale after image loads
                 const rect = resultCanvas.getBoundingClientRect();
-                canvasScale = {
-                    x: resultImg.width / rect.width,
-                    y: resultImg.height / rect.height
+                canvasDataMap.get(resultCanvas).scale = {
+                    x: resultCanvas.width / rect.width,
+                    y: resultCanvas.height / rect.height
                 };
+
+                attachHover(resultCanvas);
+            });
+        }
+
+
+        function drawImageOnCanvas(b64, canvas, onLoad) {
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                if (onLoad) onLoad();
             };
-            resultImg.src = 'data:image/png;base64,' + data.image_b64;
+            img.src = 'data:image/png;base64,' + b64;
+        }
 
-            // Store crack metadata for hover
-            crackData = data.cracks;
 
-            // Show summary
-            document.getElementById('crackCount').textContent = data.crack_count;
-            document.getElementById('stats').style.display = 'block';
-        });
+        function attachHover(canvas) {
+            canvas.addEventListener('mousemove', (e) => {
+                const data = canvasDataMap.get(canvas);
+                if (!data) return;
 
-        // Hover detection on result canvas
-        document.getElementById('resultCanvas').addEventListener('mousemove', (e) => {
-            const canvas = document.getElementById('resultCanvas');
-            const rect = canvas.getBoundingClientRect();
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = (e.clientX - rect.left) * data.scale.x;
+                const mouseY = (e.clientY - rect.top)  * data.scale.y;
 
-            // Convert mouse position to image coordinates
-            const mouseX = (e.clientX - rect.left) * canvasScale.x;
-            const mouseY = (e.clientY - rect.top) * canvasScale.y;
+                const tooltip = document.getElementById('tooltip');
+                let hoveredCrack = null;
 
-            const tooltip = document.getElementById('tooltip');
-            let hoveredCrack = null;
-
-            // Check if mouse is inside any crack's bounding box
-            for (const crack of crackData) {
-                const [bx, by, bw, bh] = crack.bbox;
-                if (mouseX >= bx && mouseX <= bx + bw &&
-                    mouseY >= by && mouseY <= by + bh) {
-                    hoveredCrack = crack;
-                    break;
+                for (const crack of data.cracks) {
+                    const [bx, by, bw, bh] = crack.bbox;
+                    if (mouseX >= bx && mouseX <= bx + bw &&
+                        mouseY >= by && mouseY <= by + bh) {
+                        hoveredCrack = crack;
+                        break;
+                    }
                 }
-            }
 
-            if (hoveredCrack) {
-                tooltip.style.display = 'block';
-                tooltip.style.left = (e.clientX + 14) + 'px';
-                tooltip.style.top  = (e.clientY - 10) + 'px';
-                tooltip.innerHTML = `
-                    <strong>Crack #${hoveredCrack.id + 1}</strong><br>
-                    Area: ${hoveredCrack.area_px.toLocaleString()} px²<br>
-                    Perimeter: ${hoveredCrack.perimeter_px.toLocaleString()} px<br>
-                    Confidence: ${(hoveredCrack.score * 100).toFixed(1)}%
-                `;
-            } else {
-                tooltip.style.display = 'none';
-            }
-        });
+                if (hoveredCrack) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.clientX + 14) + 'px';
+                    tooltip.style.top  = (e.clientY - 10) + 'px';
+                    tooltip.innerHTML = `
+                        <strong>Crack #${hoveredCrack.id + 1}</strong><br>
+                        Area: ${hoveredCrack.area_px.toLocaleString()} px²<br>
+                        Perimeter: ${hoveredCrack.perimeter_px.toLocaleString()} px<br>
+                        Confidence: ${(hoveredCrack.score * 100).toFixed(1)}%
+                    `;
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            });
 
-        document.getElementById('resultCanvas').addEventListener('mouseleave', () => {
-            document.getElementById('tooltip').style.display = 'none';
-        });
+            canvas.addEventListener('mouseleave', () => {
+                document.getElementById('tooltip').style.display = 'none';
+            });
+        }
     </script>
 </body>
 </html>

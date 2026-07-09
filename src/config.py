@@ -26,5 +26,5 @@ class Config:
     PIXEL_SIZE_MM = 0.05  # calibration factor
 
     # Inference
-    CONFIDENCE_THRESHOLD = 0.5
+    CONFIDENCE_THRESHOLD = 0.35
     MIN_INSTANCE_AREA_PX = 50

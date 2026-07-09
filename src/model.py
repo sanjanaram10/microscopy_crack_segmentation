@@ -17,7 +17,7 @@ def build_model(num_classes):
     in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
     model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, 256, num_classes)
 
-    model.roi_heads.nms_thresh = 0.3
+    model.roi_heads.nms_thresh = 0.1
     model.roi_heads.detections_per_img = 50
 
     return model

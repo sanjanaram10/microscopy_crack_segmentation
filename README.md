@@ -3,7 +3,6 @@
 1. Clone the repo
 ```bash
    git clone https://github.com/yourname/microscopy_image_reader
-   cd microscopy_image_reader
    pip install -r requirements.txt
 ```
 

@@ -142,7 +142,7 @@ def main():
         scaler = None
 
     Path(cfg.CHECKPOINT_DIR).mkdir(parents=True, exist_ok=True)
-    Path("outputs/logs").mkdir(parents=True, exist_ok=True)
+    Path("logs").mkdir(parents=True, exist_ok=True)
 
     print("[Setup] Loading datasets...")
     train_ds = CrackDataset(
@@ -231,7 +231,7 @@ def main():
                 break
 
     print("\n[Training] Complete!")
-    plot_training_curve(log_path, "outputs/logs/training_curve.png")
+    plot_training_curve(log_path, "logs/training_curve.png")
     print("[Setup] Done!")
 
 

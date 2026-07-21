@@ -14,10 +14,10 @@ class Config:
     # Training
     DEVICE = "cpu"
     BATCH_SIZE = 4
-    NUM_EPOCHS = 30
+    NUM_EPOCHS = 40
     LR = 1e-4
     WEIGHT_DECAY = 1e-4
-    LR_STEP_SIZE = 10
+    LR_STEP_SIZE = 15
     LR_GAMMA = 0.5
     GRAD_ACCUM_STEPS = 2
 
@@ -26,5 +26,5 @@ class Config:
     PIXEL_SIZE_MM = 0.05  # calibration factor
 
     # Inference
-    CONFIDENCE_THRESHOLD = 0.35
+    CONFIDENCE_THRESHOLD = 0.3
     MIN_INSTANCE_AREA_PX = 50

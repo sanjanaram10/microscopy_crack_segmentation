@@ -9,7 +9,7 @@ def split_dataset(
     coco_json_path,
     images_src_dir,
     output_dir,
-    splits=(0.7, 0.2, 0.1),
+    splits=(0.8, 0.1, 0.1),
     seed=42
 ):
     """
@@ -80,6 +80,6 @@ if __name__ == "__main__":
         coco_json_path="dataset/raw/annotations/instances_default.json",
         images_src_dir="dataset/raw/images/default",
         output_dir="dataset/processed",
-        splits=(0.7, 0.2, 0.1),
+        splits=(0.8, 0.1, 0.1),
         seed=42
     )

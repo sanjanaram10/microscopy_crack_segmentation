@@ -171,10 +171,14 @@ def main():
     model = build_model(cfg.NUM_CLASSES).to(cfg.DEVICE)
 
     print("[Setup] Creating optimizer and scheduler...")
-    optimizer = torch.optim.AdamW(
-        [p for p in model.parameters() if p.requires_grad],
-        lr=cfg.LR, weight_decay=cfg.WEIGHT_DECAY
-    )
+    optimizer = torch.optim.AdamW([
+        {'params': [p for n, p in model.named_parameters()
+                    if 'backbone' not in n and p.requires_grad],
+        'lr': 1e-4},
+        {'params': [p for n, p in model.named_parameters()
+                    if 'backbone' in n and p.requires_grad],
+        'lr': 1e-5},   # 10x lower for backbone
+    ], weight_decay=cfg.WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=cfg.LR_STEP_SIZE, gamma=cfg.LR_GAMMA
     )

@@ -9,6 +9,7 @@ def build_model(num_classes):
         weights=MaskRCNN_ResNet50_FPN_Weights.DEFAULT,
         min_size=512,
         max_size=512,
+        trainable_backbone_layers=2,
     )
 
     in_features = model.roi_heads.box_predictor.cls_score.in_features
@@ -18,6 +19,6 @@ def build_model(num_classes):
     model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, 256, num_classes)
 
     model.roi_heads.nms_thresh = 0.1
-    model.roi_heads.detections_per_img = 50
-
+    model.roi_heads.detections_per_img = 200
+    model.roi_heads.score_thresh = 0.3
     return model
